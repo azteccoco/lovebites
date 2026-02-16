@@ -6,28 +6,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LoveBites: Paranormal Advice</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,700;1,400&family=Pirata+One&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Parisienne&family=Crimson+Pro:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
     body {
-      background-color: #0f0511;
+      background-color: #0d040e;
       color: #e2e8f0;
       font-family: 'Crimson Pro', serif;
+      overflow-x: hidden;
     }
-    .font-gothic {
-      font-family: 'Pirata One', cursive;
+    .font-romantic {
+      font-family: 'Cormorant Garamond', serif;
     }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
+    .font-script {
+      font-family: 'Parisienne', cursive;
     }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #1a101f;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #4a1d4a;
-      border-radius: 10px;
+    .vignette {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      box-shadow: inset 0 0 200px rgba(0,0,0,0.9);
+      pointer-events: none;
+      z-index: 100;
     }
     .glow-crimson {
-      text-shadow: 0 0 10px rgba(185, 28, 28, 0.5);
+      text-shadow: 0 0 15px rgba(220, 38, 38, 0.4);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0d040e;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #450a0a;
     }
   </style>
 <script type="importmap">
@@ -41,7 +54,8 @@
 }
 </script>
 </head>
-<body>
+<body class="custom-scrollbar">
+  <div class="vignette"></div>
   <div id="root"></div>
 </body>
 </html>

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AdviceEntry } from '../types';
 
 interface AdviceCardProps {
@@ -7,40 +7,90 @@ interface AdviceCardProps {
 }
 
 export const AdviceCard: React.FC<AdviceCardProps> = ({ entry }) => {
+  const [showTemplate, setShowTemplate] = useState(false);
+
+  const jekyllTemplate = `---
+layout: post
+title: "${entry.postTitle}"
+date: ${new Date(entry.timestamp).toISOString()}
+author: LoveBites
+creature: ${entry.creatureType}
+pseudonym: ${entry.senderName}
+category: Advice
+---
+
+## The Query
+> "${entry.question}"
+>
+> — *Signed, ${entry.senderName}, a ${entry.creatureType}*
+
+## LoveBites' Verdict
+${entry.advice}
+`;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(jekyllTemplate);
+    alert('Jekyll template copied to clipboard, darling.');
+  };
+
   return (
-    <article className="bg-[#1a101f] border border-purple-900/30 rounded-lg p-6 md:p-8 mb-8 shadow-2xl relative overflow-hidden group">
-      {/* Background Decorative Element */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-red-900/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-red-900/10 transition-colors" />
-      
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <h2 className="text-red-500 font-bold uppercase tracking-widest text-xs mb-1">
-            The Query
-          </h2>
-          <p className="italic text-lg text-slate-300">
-            "Dearest LoveBites, {entry.question}"
-          </p>
+    <article className="bg-[#1a101f] border border-red-900/10 rounded-xl mb-16 shadow-2xl relative overflow-hidden group">
+      <div className="p-8 md:p-12">
+        <div className="mb-8">
+          <div className="flex justify-between items-start mb-4">
+            <h2 className="font-romantic text-sm uppercase tracking-[0.3em] text-red-500/60 font-bold italic">
+              Column Entry #{entry.id.slice(0, 4)}
+            </h2>
+            <button 
+              onClick={() => setShowTemplate(!showTemplate)}
+              className="font-romantic text-[10px] uppercase tracking-widest text-purple-400 hover:text-purple-200 border border-purple-900/30 rounded px-2 py-1 transition-colors"
+            >
+              {showTemplate ? 'View Post' : 'View Jekyll Source'}
+            </button>
+          </div>
+          
+          <h1 className="font-romantic text-4xl md:text-5xl text-slate-100 font-bold italic mb-6 leading-tight">
+            {entry.postTitle}
+          </h1>
+
+          <div className="flex items-center gap-4 text-xs font-romantic uppercase tracking-widest text-purple-400/60 mb-8 pb-4 border-b border-red-900/10">
+            <span>By LoveBites</span>
+            <span>&bull;</span>
+            <span>{new Date(entry.timestamp).toLocaleDateString()}</span>
+            <span>&bull;</span>
+            <span className="text-red-500/40 italic">{entry.creatureType}</span>
+          </div>
         </div>
+
+        {showTemplate ? (
+          <div className="relative">
+            <pre className="bg-[#0f0511] p-6 rounded-lg text-xs font-mono text-purple-300/80 overflow-x-auto border border-purple-900/20 mb-4 whitespace-pre-wrap">
+              {jekyllTemplate}
+            </pre>
+            <button 
+              onClick={copyToClipboard}
+              className="w-full py-3 bg-purple-900/20 hover:bg-purple-900/40 text-purple-200 font-romantic text-xs uppercase tracking-widest rounded transition-colors"
+            >
+              Copy Jekyll Markdown
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-10">
+            <div className="italic text-xl text-slate-300 leading-relaxed border-l-2 border-red-900/20 pl-8 py-2">
+              "Dearest LoveBites, {entry.question}"
+              <p className="mt-4 font-script text-lg text-purple-400/60 not-italic">
+                &mdash; {entry.senderName}
+              </p>
+            </div>
+
+            <div className="font-romantic text-xl text-slate-200 leading-relaxed space-y-4 whitespace-pre-wrap selection:bg-red-900/30">
+              {entry.advice}
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="border-t border-purple-900/20 pt-6 mb-4">
-        <p className="text-xs text-purple-400 mb-4 font-mono uppercase tracking-tighter">
-          &mdash; Signed, <span className="text-purple-300 font-bold">{entry.senderName}</span>, a lonely <span className="text-purple-300">{entry.creatureType}</span>
-        </p>
-        
-        <h3 className="font-gothic text-3xl text-red-700 mb-4 border-b border-red-900/20 inline-block pb-1">
-          The Verdict
-        </h3>
-        
-        <div className="text-slate-200 leading-relaxed text-lg space-y-4 whitespace-pre-wrap">
-          {entry.advice}
-        </div>
-      </div>
-
-      <div className="text-[10px] text-purple-500/50 flex justify-between mt-8 border-t border-purple-900/10 pt-4 italic">
-        <span>Transcribed at the witching hour</span>
-        <span>{new Date(entry.timestamp).toLocaleDateString()}</span>
-      </div>
+      <div className="h-2 bg-gradient-to-r from-transparent via-red-900/20 to-transparent" />
     </article>
   );
 };

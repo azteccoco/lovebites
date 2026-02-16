@@ -4,6 +4,7 @@ export interface AdviceEntry {
   timestamp: number;
   creatureType: string;
   senderName: string;
+  postTitle: string;
   question: string;
   advice: string;
 }
