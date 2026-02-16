@@ -1,0 +1,5 @@
+{
+  "name": "LoveBites: Advice for the Paranormal Lovelorn",
+  "description": "An interactive advice column for the supernatural world. Get expert relationship guidance for vampires, ghosts, werewolves, and other creatures of the night using the Gemini API.",
+  "requestFramePermissions": []
+}
