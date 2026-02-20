@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface LayoutProps {
@@ -8,19 +7,34 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, onToggleEditor, showEditor }) => {
+  const handleGlobalShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const url = window.location.origin + window.location.pathname;
+    navigator.clipboard.writeText(url);
+    alert('The column link has been whispered to your clipboard.');
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0d040e] text-slate-200 selection:bg-red-900/40">
       <header className="border-b border-red-900/10 bg-[#0d040e]/95 sticky top-0 z-[60] py-10 px-4 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div className="w-10 h-10 hidden md:block"></div> {/* Spacer */}
+          <div className="w-10 h-10 hidden md:block"></div> {/* Spacer to help center the middle group */}
           
           <div className="flex flex-col items-center">
             <h1 className="font-romantic text-6xl md:text-8xl text-red-700 glow-crimson italic font-bold tracking-tight">
               LoveBites
             </h1>
-            <p className="mt-4 font-romantic italic text-white text-center text-xs md:text-sm tracking-[0.2em] md:tracking-[0.5em] uppercase font-light">
+            <p className="mt-4 font-romantic italic text-white text-center text-sm md:text-base tracking-[0.2em] md:tracking-[0.5em] uppercase font-light">
               Advice for the Paranormal Lovelorn
             </p>
+            
+            <nav className="mt-6 flex justify-center gap-6 font-romantic text-[9px] md:text-[11px] uppercase tracking-[0.4em]">
+              <a href="/" className="text-white hover:text-red-500 transition-colors">Chronicles</a>
+              <span className="text-red-900/30">&bull;</span>
+              <a href="#" className="text-white hover:text-red-500 transition-colors">Member</a>
+              <span className="text-red-900/30">&bull;</span>
+              <button onClick={handleGlobalShare} className="text-white hover:text-red-500 transition-colors uppercase">Share</button>
+            </nav>
           </div>
 
           <button 
@@ -43,14 +57,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onToggleEditor, showEd
         {children}
       </main>
 
-      <footer className="border-t border-red-900/10 bg-[#0a030a] py-16 px-4 text-center">
-        <div className="mb-8 flex justify-center gap-8 font-romantic text-[10px] text-red-800 uppercase tracking-[0.4em]">
-          <a href="#" className="hover:text-red-500 transition-colors">Chronicles</a>
-          <span>&bull;</span>
-          <a href="#" className="hover:text-red-500 transition-colors">Editorial Policy</a>
-          <span>&bull;</span>
-          <a href="https://app.pagescms.org" target="_blank" rel="noopener" className="hover:text-red-500 transition-colors">CMS Access</a>
-        </div>
+      <footer className="border-t border-red-900/10 bg-[#0a030a] py-12 px-4 text-center">
         <p className="font-romantic text-red-900/30 text-[9px] tracking-[0.5em] uppercase">
           &copy; 1824 LoveBites &bull; Transylvania Central Ledger
         </p>

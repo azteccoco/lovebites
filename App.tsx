@@ -1,26 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { AdviceCard } from './components/AdviceCard';
 import { CreatureType, AdviceEntry } from './types';
 import { getParanormalAdvice } from './services/geminiService';
 
-const INITIAL_ADVICE: AdviceEntry[] = [
-  {
-    id: '1',
-    timestamp: Date.now() - 86400000,
-    creatureType: 'Vampire',
-    senderName: 'Dusty_in_Denver',
-    postTitle: 'The Garlic Bread Dilemma',
-    question: 'I fell for a mortal who loves garlic bread. Do I tell her the truth or just keep wearing a mask to dinner?',
-    advice: "My dear nocturnal friend, deception is a fragile foundation for any romance, especially one involving high-carb Italian appetizers. You cannot spend eternity in a respirator. Tell her the truth. If she truly loves you, she'll switch to pesto. If not, well, there are plenty of other necks in the sea. And please, do check your cape for crumbs before you leave."
-  }
-];
+// Slugs of posts that should be pre-loaded if the local archive is empty
+const DEFAULT_POST_SLUGS: string[] = [];
 
 const App: React.FC = () => {
   const [entries, setEntries] = useState<AdviceEntry[]>(() => {
     const saved = localStorage.getItem('lovebites_archive');
-    return saved ? JSON.parse(saved) : INITIAL_ADVICE;
+    return saved ? JSON.parse(saved) : [];
   });
   
   const [showEditor, setShowEditor] = useState(false);
@@ -34,59 +24,97 @@ const App: React.FC = () => {
     question: ''
   });
 
-  // Handle Routing via Query Params (GitHub Pages friendly)
+  // Fetch standard posts on mount if local state is empty
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const postSlug = params.get('post');
-    if (postSlug) {
-      setCurrentSlug(postSlug);
-      fetchExternalPost(postSlug);
-    } else {
-      setCurrentSlug(null);
+    if (entries.length === 0 && DEFAULT_POST_SLUGS.length > 0) {
+      DEFAULT_POST_SLUGS.forEach(slug => fetchExternalPost(slug));
     }
-  }, [window.location.search]);
+  }, []);
+
+  // Handle routing via query params for GitHub Pages compatibility
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const params = new URLSearchParams(window.location.search);
+      const postSlug = params.get('post');
+      if (postSlug) {
+        setCurrentSlug(postSlug);
+        fetchExternalPost(postSlug);
+      } else {
+        setCurrentSlug(null);
+      }
+    };
+
+    handleLocationChange();
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('lovebites_archive', JSON.stringify(entries));
   }, [entries]);
 
   const fetchExternalPost = async (slug: string) => {
+    // If we already have it in state, skip fetching
+    if (entries.find(e => e.id === slug)) return;
+
     setLoadingPost(true);
     try {
-      // PagesCMS usually saves to a 'posts' or '_posts' directory
-      // We try to fetch the raw markdown file from the relative path
-      const response = await fetch(`./posts/${slug}.md`);
-      if (!response.ok) throw new Error("Post not found");
-      const text = await response.text();
+      // Possible paths where PagesCMS might save Jekyll posts
+      const possiblePaths = [`./posts/${slug}.md`, `./_posts/${slug}.md`, `./${slug}.md`];
+      let text = '';
       
-      // Basic Frontmatter & Content Parsing
+      for (const path of possiblePaths) {
+        try {
+          const res = await fetch(path);
+          if (res.ok) {
+            text = await res.text();
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+
+      if (!text) throw new Error("Post not found");
+      
+      // Simple Jekyll Frontmatter Parser
       const fmMatch = text.match(/---([\s\S]*?)---([\s\S]*)/);
       if (fmMatch) {
         const fm = fmMatch[1];
         const content = fmMatch[2];
-        const getVal = (key: string) => fm.match(new RegExp(`${key}:\\s*["']?(.*?)["']?\\n`))?.[1] || 'Unknown';
         
-        const queryMatch = content.match(/## The Query\n>\s*"(.*?)"/);
-        const adviceMatch = content.match(/## LoveBites' Verdict\n([\s\S]*)/);
+        const getVal = (key: string) => {
+          const regex = new RegExp(`${key}:\\s*["']?(.*?)["']?(\\n|\\r|$)`, 'i');
+          const match = fm.match(regex);
+          return match ? match[1].trim() : '';
+        };
+        
+        const title = getVal('title') || 'A Lost Chronicle';
+        const dateStr = getVal('date');
+        const creature = getVal('creature') || 'Unknown Entity';
+        const pseudonym = getVal('pseudonym') || 'Anonymous';
+        
+        // Match specific markdown sections or fallback to raw content
+        const querySection = content.match(/## The Query\n>\s*"(.*?)"/s) || content.match(/>\s*"(.*?)"/s);
+        const verdictSection = content.match(/## LoveBites' Verdict\n([\s\S]*)/s) || [null, content];
 
         const newEntry: AdviceEntry = {
           id: slug,
-          timestamp: new Date(getVal('date')).getTime() || Date.now(),
-          creatureType: getVal('creature'),
-          senderName: getVal('pseudonym'),
-          postTitle: getVal('title'),
-          question: queryMatch?.[1] || 'Question missing...',
-          advice: adviceMatch?.[1].trim() || 'Advice missing...'
+          timestamp: dateStr ? new Date(dateStr).getTime() : Date.now(),
+          creatureType: creature,
+          senderName: pseudonym,
+          postTitle: title,
+          question: querySection?.[1] || 'The query has vanished into the aether...',
+          advice: verdictSection?.[1]?.trim() || 'No advice was found for this soul.'
         };
 
-        // Add to entries if not already there to prevent duplicates
         setEntries(prev => {
           if (prev.find(e => e.id === slug)) return prev;
           return [newEntry, ...prev];
         });
       }
     } catch (error) {
-      console.warn("Could not fetch remote post. It may not be published yet.", error);
+      console.warn(`Unable to retrieve post: ${slug}`, error);
     } finally {
       setLoadingPost(false);
     }
@@ -105,7 +133,7 @@ const App: React.FC = () => {
       );
 
       const newEntry: AdviceEntry = {
-        id: crypto.randomUUID(),
+        id: postTitle.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-'),
         timestamp: Date.now(),
         creatureType: draft.creatureType,
         senderName: draft.senderName,
@@ -124,52 +152,53 @@ const App: React.FC = () => {
     }
   };
 
-  const navigateToArchive = () => {
-    window.history.pushState({}, '', window.location.pathname);
+  const navigateHome = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('post');
+    window.history.pushState({}, '', url.pathname);
     setCurrentSlug(null);
   };
 
-  const filteredEntries = currentSlug 
+  const displayedEntries = currentSlug 
     ? entries.filter(e => e.id === currentSlug)
     : entries;
 
   return (
     <Layout onToggleEditor={() => setShowEditor(!showEditor)} showEditor={showEditor}>
-      {/* Back Navigation for Single Posts */}
       {currentSlug && (
         <button 
-          onClick={navigateToArchive}
-          className="mb-8 flex items-center gap-2 font-romantic text-xs uppercase tracking-[0.3em] text-red-500 hover:text-red-300 transition-colors"
+          onClick={navigateHome}
+          className="mb-12 flex items-center gap-4 font-romantic text-xs uppercase tracking-[0.4em] text-red-600 hover:text-red-400 transition-all group"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Return to Ledger
+          <span className="text-xl transform group-hover:-translate-x-2 transition-transform">←</span>
+          The Archive Ledger
         </button>
       )}
 
-      {/* Drafting Suite */}
       {showEditor && !currentSlug && (
-        <section className="mb-20 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="bg-[#1a0a1a] border border-red-900/30 rounded-2xl p-8 md:p-14 shadow-[0_0_100px_rgba(0,0,0,1)] relative">
-            <h2 className="font-romantic italic font-bold text-4xl text-red-600 mb-8 text-center uppercase tracking-tighter">Drafting Desk</h2>
-            <form onSubmit={handleGenerate} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <section className="mb-24 animate-in fade-in zoom-in-95 duration-700">
+          <div className="bg-[#1a0a1a] border border-red-900/30 rounded-3xl p-10 md:p-16 shadow-[0_0_80px_rgba(0,0,0,0.8)] relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5 font-romantic text-9xl text-red-800 italic select-none pointer-events-none">
+              Scriptum
+            </div>
+            <h2 className="font-romantic text-4xl text-red-600 mb-10 text-center uppercase tracking-widest relative z-10 font-bold">Summon Guidance</h2>
+            <form onSubmit={handleGenerate} className="space-y-10 relative z-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div>
-                  <label className="block font-romantic text-[10px] uppercase tracking-[0.3em] text-red-800 mb-3 font-bold">Pseudonym</label>
+                  <label className="block font-romantic text-[10px] uppercase tracking-[0.4em] text-red-800 mb-4 font-bold">Pseudonym</label>
                   <input 
                     type="text"
                     required
-                    placeholder="SanguineSpirit"
-                    className="w-full bg-[#0d040e] border border-red-900/10 rounded p-4 font-romantic text-lg text-slate-200 focus:outline-none focus:border-red-800 transition-all placeholder:opacity-10"
+                    placeholder="E.g. Nocturnal_Nora"
+                    className="w-full bg-[#0d040e] border border-red-900/20 rounded-lg p-5 font-romantic text-xl text-slate-100 focus:outline-none focus:border-red-600 transition-all placeholder:text-red-900/10"
                     value={draft.senderName}
                     onChange={e => setDraft(p => ({ ...p, senderName: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="block font-romantic text-[10px] uppercase tracking-[0.3em] text-red-800 mb-3 font-bold">Lineage</label>
+                  <label className="block font-romantic text-[10px] uppercase tracking-[0.4em] text-red-800 mb-4 font-bold">Spectral Lineage</label>
                   <select 
-                    className="w-full bg-[#0d040e] border border-red-900/10 rounded p-4 font-romantic text-lg text-slate-200 focus:outline-none focus:border-red-800 transition-all cursor-pointer"
+                    className="w-full bg-[#0d040e] border border-red-900/20 rounded-lg p-5 font-romantic text-xl text-slate-100 focus:outline-none focus:border-red-600 transition-all cursor-pointer"
                     value={draft.creatureType}
                     onChange={e => setDraft(p => ({ ...p, creatureType: e.target.value as CreatureType }))}
                   >
@@ -180,11 +209,12 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block font-romantic text-[10px] uppercase tracking-[0.3em] text-red-800 mb-3 font-bold">The Query</label>
+                <label className="block font-romantic text-[10px] uppercase tracking-[0.4em] text-red-800 mb-4 font-bold">Your Inquiry</label>
                 <textarea 
                   required
                   rows={4}
-                  className="w-full bg-[#0d040e] border border-red-900/10 rounded p-4 font-romantic text-lg text-slate-200 focus:outline-none focus:border-red-800 transition-all resize-none"
+                  placeholder="Tell us of your heart's shadow..."
+                  className="w-full bg-[#0d040e] border border-red-900/20 rounded-lg p-5 font-romantic text-xl text-slate-100 focus:outline-none focus:border-red-600 transition-all resize-none placeholder:text-red-900/10"
                   value={draft.question}
                   onChange={e => setDraft(p => ({ ...p, question: e.target.value }))}
                 />
@@ -192,31 +222,37 @@ const App: React.FC = () => {
               <button 
                 type="submit"
                 disabled={isGenerating}
-                className="w-full py-5 rounded font-romantic italic font-bold text-2xl tracking-[0.1em] bg-red-950/20 text-red-100 hover:bg-red-900/30 border border-red-900/30 transition-all"
+                className="w-full py-7 rounded-xl font-romantic font-bold text-2xl tracking-[0.3em] bg-red-950/20 text-red-100 hover:bg-red-900/40 border border-red-900/40 transition-all disabled:opacity-50 group uppercase"
               >
-                {isGenerating ? 'Channeling Spirits...' : 'Draft New Column'}
+                {isGenerating ? (
+                  <span className="flex items-center justify-center gap-4">
+                    <span className="animate-spin text-red-500">†</span> Channeling...
+                  </span>
+                ) : 'Release to the Void'}
               </button>
             </form>
           </div>
         </section>
       )}
 
-      {/* Main Column Entries */}
-      <section className="space-y-4">
-        {loadingPost ? (
-          <div className="text-center py-32 px-4 animate-pulse">
-            <p className="font-romantic text-3xl text-red-200/20 italic">Summoning the records...</p>
+      <div className="space-y-4">
+        {loadingPost && displayedEntries.length === 0 ? (
+          <div className="text-center py-48 animate-pulse">
+            <div className="text-red-900 text-7xl mb-10">❦</div>
+            <p className="font-romantic text-3xl text-red-200/20 italic tracking-[0.2em] uppercase">Unsealing the chronicle...</p>
           </div>
-        ) : filteredEntries.length === 0 ? (
-          <div className="text-center py-32 px-4">
-            <p className="font-romantic text-3xl text-red-200/5 italic">The ledger has turned to dust...</p>
+        ) : displayedEntries.length === 0 ? (
+          <div className="text-center py-48 border border-dashed border-red-950/10 rounded-3xl">
+            <p className="font-romantic text-2xl text-red-900/20 italic tracking-widest uppercase">The ledger is currently empty.</p>
           </div>
         ) : (
-          filteredEntries.map(entry => (
-            <AdviceCard key={entry.id} entry={entry} />
-          ))
+          displayedEntries
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .map(entry => (
+              <AdviceCard key={entry.id} entry={entry} />
+            ))
         )}
-      </section>
+      </div>
     </Layout>
   );
 };

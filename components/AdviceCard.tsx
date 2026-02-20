@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { AdviceEntry } from '../types';
 
 interface AdviceCardProps {
@@ -7,90 +6,67 @@ interface AdviceCardProps {
 }
 
 export const AdviceCard: React.FC<AdviceCardProps> = ({ entry }) => {
-  const [showTemplate, setShowTemplate] = useState(false);
-
-  const jekyllTemplate = `---
-layout: post
-title: "${entry.postTitle}"
-date: ${new Date(entry.timestamp).toISOString()}
-author: LoveBites
-creature: ${entry.creatureType}
-pseudonym: ${entry.senderName}
-category: Advice
----
-
-## The Query
-> "${entry.question}"
->
-> — *Signed, ${entry.senderName}, a ${entry.creatureType}*
-
-## LoveBites' Verdict
-${entry.advice}
-`;
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(jekyllTemplate);
-    alert('Jekyll template copied to clipboard, darling.');
+  const handleShare = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('post', entry.id);
+    navigator.clipboard.writeText(url.toString());
+    alert('The link to this specific volume is now in your grasp.');
   };
 
   return (
-    <article className="bg-[#1a101f] border border-red-900/10 rounded-xl mb-16 shadow-2xl relative overflow-hidden group">
-      <div className="p-8 md:p-12">
-        <div className="mb-8">
-          <div className="flex justify-between items-start mb-4">
-            <h2 className="font-romantic text-sm uppercase tracking-[0.3em] text-red-500/60 font-bold italic">
-              Column Entry #{entry.id.slice(0, 4)}
-            </h2>
-            <button 
-              onClick={() => setShowTemplate(!showTemplate)}
-              className="font-romantic text-[10px] uppercase tracking-widest text-purple-400 hover:text-purple-200 border border-purple-900/30 rounded px-2 py-1 transition-colors"
-            >
-              {showTemplate ? 'View Post' : 'View Jekyll Source'}
-            </button>
+    <article className="bg-[#110813] border border-red-950/30 rounded-3xl mb-24 shadow-[0_30px_60px_rgba(0,0,0,0.9)] relative overflow-hidden transition-all hover:border-red-900/30">
+      <div className="p-10 md:p-20">
+        <header className="mb-14">
+          <div className="flex justify-between items-center mb-10">
+            <div className="flex flex-col">
+              <div className="h-[1px] w-16 bg-red-900/30" />
+            </div>
+            
+            <div className="flex gap-4">
+              <button 
+                onClick={handleShare}
+                className="font-romantic text-[9px] uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors px-3 py-1.5 border border-red-900/10 rounded hover:bg-red-950/20"
+              >
+                Share
+              </button>
+            </div>
           </div>
           
-          <h1 className="font-romantic text-4xl md:text-5xl text-slate-100 font-bold italic mb-6 leading-tight">
+          <h1 className="font-romantic text-5xl md:text-8xl text-slate-100 font-bold italic mb-10 leading-[1.1] glow-crimson tracking-tighter">
             {entry.postTitle}
           </h1>
 
-          <div className="flex items-center gap-4 text-xs font-romantic uppercase tracking-widest text-purple-400/60 mb-8 pb-4 border-b border-red-900/10">
-            <span>By LoveBites</span>
-            <span>&bull;</span>
-            <span>{new Date(entry.timestamp).toLocaleDateString()}</span>
-            <span>&bull;</span>
-            <span className="text-red-500/40 italic">{entry.creatureType}</span>
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-[10px] font-romantic uppercase tracking-[0.4em] text-red-900/50 pt-8 border-t border-red-900/10">
+            <span className="text-red-700">Author: LoveBites</span>
+            <span className="opacity-20">|</span>
+            <span>{new Date(entry.timestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            <span className="opacity-20">|</span>
+            <span className="italic text-red-600/30">Subject: {entry.creatureType}</span>
           </div>
-        </div>
+        </header>
 
-        {showTemplate ? (
+        <div className="space-y-20 animate-in fade-in duration-1000">
           <div className="relative">
-            <pre className="bg-[#0f0511] p-6 rounded-lg text-xs font-mono text-purple-300/80 overflow-x-auto border border-purple-900/20 mb-4 whitespace-pre-wrap">
-              {jekyllTemplate}
-            </pre>
-            <button 
-              onClick={copyToClipboard}
-              className="w-full py-3 bg-purple-900/20 hover:bg-purple-900/40 text-purple-200 font-romantic text-xs uppercase tracking-widest rounded transition-colors"
-            >
-              Copy Jekyll Markdown
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-10">
-            <div className="italic text-xl text-slate-300 leading-relaxed border-l-2 border-red-900/20 pl-8 py-2">
-              "Dearest LoveBites, {entry.question}"
-              <p className="mt-4 font-script text-lg text-purple-400/60 not-italic">
+            <span className="absolute -top-10 -left-6 text-9xl text-red-900/10 font-serif leading-none select-none">“</span>
+            <div className="italic text-2xl md:text-4xl text-slate-300 leading-[1.6] border-l-2 border-red-900/20 pl-12 py-4 font-romantic">
+              "{entry.question}"
+              <p className="mt-8 font-script text-2xl text-red-600/30 not-italic">
                 &mdash; {entry.senderName}
               </p>
             </div>
-
-            <div className="font-romantic text-xl text-slate-200 leading-relaxed space-y-4 whitespace-pre-wrap selection:bg-red-900/30">
-              {entry.advice}
-            </div>
           </div>
-        )}
+
+          <div className="font-romantic text-2xl md:text-3xl text-slate-200 leading-[1.8] space-y-8 whitespace-pre-wrap selection:bg-red-900/60 first-letter:text-7xl first-letter:font-bold first-letter:text-red-700 first-letter:mr-4 first-letter:float-left first-letter:mt-2">
+            {entry.advice}
+          </div>
+          
+          <div className="pt-20 flex justify-center">
+            <div className="text-red-900/10 text-3xl tracking-[1.5em] select-none">❦ ❦ ❦</div>
+          </div>
+        </div>
       </div>
 
-      <div className="h-2 bg-gradient-to-r from-transparent via-red-900/20 to-transparent" />
+      <div className="h-2 bg-gradient-to-r from-transparent via-red-950/20 to-transparent opacity-30" />
     </article>
   );
 };
