@@ -1,24 +1,18 @@
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './',
-  define: {
-    'process.env': {
-      API_KEY: JSON.stringify(process.env.API_KEY || '')
-    }
-  },
+  // Set the base path to your repository name for GitHub Pages
+  base: '/lovebites/',
   build: {
     outDir: 'dist',
-    assetsDir: 'assets',
-    emptyOutDir: true,
     rollupOptions: {
-      input: {
-        main: './index.html',
-        404: './404.html'
-      }
-    }
+      // Dependencies should be bundled, not externalized, for a standard deployment
+    },
+  },
+  server: {
+    host: true,
+    port: 3000,
   }
 });
